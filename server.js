@@ -1,15 +1,23 @@
-require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
+
+// .envファイルが存在する場合のみdotenvを読み込む（Railway等では不要）
+if (fs.existsSync(path.join(__dirname, '.env'))) {
+  require('dotenv').config();
+}
+
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
-const path = require('path');
+
+const PORT = parseInt(process.env.PORT, 10) || 3000;
+const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
+
+console.log(`Server starting on port ${PORT}`);
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
-
-const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
-const PORT = process.env.PORT || 3000;
 
 // 静的ファイル配信
 app.use(express.static(path.join(__dirname, 'public')));
