@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="翻訳">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="manifest" href="/manifest.json">
+  <title>リアルタイム翻訳</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+      background: #000;
+      color: #f5f5f7;
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    /* ヘッダー */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      padding-top: calc(12px + env(safe-area-inset-top));
+      padding-left: calc(16px + env(safe-area-inset-left));
+      padding-right: calc(16px + env(safe-area-inset-right));
+      flex-shrink: 0;
+      background: #000;
+      z-index: 10;
+    }
+
+    .lang-select {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    .lang-select select {
+      background: #1c1c1e;
+      color: #f5f5f7;
+      border: 1px solid #2c2c2e;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .lang-arrow {
+      color: #48484a;
+      font-size: 16px;
+    }
+
+    .settings-btn {
+      background: none;
+      border: none;
+      color: #636366;
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px 8px;
+      -webkit-tap-highlight-color: transparent;
+      transition: color 0.2s;
+    }
+
+    .settings-btn:active {
+      color: #f5f5f7;
+    }
+
+    /* 翻訳表示エリア */
+    .display-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 20px 16px;
+      padding-left: calc(16px + env(safe-area-inset-left));
+      padding-right: calc(16px + env(safe-area-inset-right));
+      padding-bottom: 140px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      gap: 14px;
+    }
+
+    /* 履歴 */
+    .history-item {
+      opacity: 0.3;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 8px 14px;
+      border-left: 2px solid #2c2c2e;
+      transition: opacity 0.5s ease;
+    }
+
+    .history-item .original {
+      color: #636366;
+      font-size: 12px;
+      margin-bottom: 3px;
+    }
+
+    .history-item .translated {
+      color: #8e8e93;
+    }
+
+    /* 確定翻訳（最新） */
+    .current-translation {
+      font-size: 24px;
+      font-weight: 600;
+      line-height: 1.5;
+      padding: 20px;
+      background: #1c1c1e;
+      border-radius: 16px;
+      border-left: 3px solid #0a84ff;
+      min-height: 60px;
+      transition: all 0.3s ease;
+    }
+
+    .current-translation .original {
+      font-size: 14px;
+      color: #636366;
+      font-weight: 400;
+      margin-bottom: 8px;
+    }
+
+    .current-translation .translated {
+      color: #f5f5f7;
+    }
+
+    .current-translation.pop {
+      animation: pop 0.3s ease-out;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0.97); opacity: 0.7; }
+      50% { transform: scale(1.01); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* 中間結果 */
+    .interim-text {
+      font-size: 15px;
+      color: #48484a;
+      padding: 8px 14px;
+      border-left: 2px dashed #2c2c2e;
+      min-height: 32px;
+      font-style: italic;
+      transition: all 0.1s ease;
+    }
+
+    /* フッター（固定） */
+    .footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 16px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      gap: 8px;
+      background: linear-gradient(to bottom, transparent, #000 30%);
+      z-index: 10;
+    }
+
+    .mic-btn {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      border: none;
+      background: #f5f5f7;
+      color: #000;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 2px 12px rgba(255, 255, 255, 0.08);
+    }
+
+    .mic-btn svg {
+      width: 28px;
+      height: 28px;
+      transition: all 0.2s ease;
+    }
+
+    .mic-btn:active {
+      transform: scale(0.92);
+    }
+
+    .mic-btn.recording {
+      background: #ff453a;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .mic-btn.recording svg {
+      color: #fff;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 69, 58, 0.5); }
+      50% { box-shadow: 0 0 0 16px rgba(255, 69, 58, 0); }
+    }
+
+    .status-text {
+      font-size: 12px;
+      color: #48484a;
+      letter-spacing: 0.3px;
+    }
+
+    /* 空の状態 */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #3a3a3c;
+      font-size: 15px;
+      text-align: center;
+      line-height: 1.7;
+    }
+
+    /* === 設定画面 === */
+    .settings-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 100;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
+    }
+
+    .settings-overlay.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .settings-overlay.visible .settings-panel {
+      transform: translateY(0);
+    }
+
+    .settings-panel {
+      background: #1c1c1e;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90dvh;
+      border-radius: 20px 20px 0 0;
+      padding: 24px 20px;
+      padding-bottom: calc(24px + env(safe-area-inset-bottom));
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      transform: translateY(100%);
+      transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+
+    .settings-handle {
+      width: 36px;
+      height: 5px;
+      background: #48484a;
+      border-radius: 3px;
+      margin: 0 auto 20px;
+    }
+
+    .settings-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .settings-section {
+      margin-bottom: 24px;
+    }
+
+    .settings-label {
+      font-size: 13px;
+      color: #8e8e93;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .settings-input-wrap {
+      display: flex;
+      align-items: center;
+      background: #2c2c2e;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .settings-input-wrap input {
+      flex: 1;
+      background: none;
+      border: none;
+      color: #f5f5f7;
+      font-size: 16px;
+      padding: 12px 14px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .settings-input-wrap input::placeholder {
+      color: #48484a;
+    }
+
+    .toggle-visibility {
+      background: none;
+      border: none;
+      color: #636366;
+      font-size: 18px;
+      padding: 12px 14px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .settings-hint {
+      margin-top: 20px;
+      background: #2c2c2e;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .settings-hint-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #f5f5f7;
+    }
+
+    .settings-hint ol {
+      list-style: none;
+      counter-reset: steps;
+    }
+
+    .settings-hint li {
+      counter-increment: steps;
+      font-size: 14px;
+      color: #8e8e93;
+      line-height: 1.6;
+      margin-bottom: 8px;
+      padding-left: 28px;
+      position: relative;
+    }
+
+    .settings-hint li:last-child {
+      margin-bottom: 0;
+    }
+
+    .settings-hint li::before {
+      content: counter(steps);
+      position: absolute;
+      left: 0;
+      width: 20px;
+      height: 20px;
+      background: #3a3a3c;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 600;
+      color: #f5f5f7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .settings-hint a {
+      color: #0a84ff;
+      text-decoration: none;
+    }
+
+    .settings-hint .hint-note {
+      font-size: 13px;
+      color: #636366;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #3a3a3c;
+      line-height: 1.5;
+    }
+
+    .settings-lang-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .settings-lang-row select {
+      flex: 1;
+      background: #2c2c2e;
+      color: #f5f5f7;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 16px;
+      font-weight: 500;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .settings-lang-arrow {
+      color: #48484a;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .settings-save-btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: #0a84ff;
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.2s;
+    }
+
+    .settings-save-btn:active {
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <!-- 設定画面 -->
+  <div class="settings-overlay" id="settingsOverlay">
+    <div class="settings-panel" id="settingsPanel">
+      <div class="settings-handle"></div>
+      <div class="settings-title">設定</div>
+
+      <div class="settings-section">
+        <div class="settings-label">翻訳言語</div>
+        <div class="settings-lang-row">
+          <select id="settingsSourceLang">
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+            <option value="zh">中文</option>
+            <option value="ko">한국어</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+          </select>
+          <span class="settings-lang-arrow">→</span>
+          <select id="settingsTargetLang">
+            <option value="JA" selected>日本語</option>
+            <option value="EN">English</option>
+            <option value="ZH">中文</option>
+            <option value="KO">한국어</option>
+            <option value="ES">Español</option>
+            <option value="FR">Français</option>
+            <option value="DE">Deutsch</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-label">DeepL APIキー（任意）</div>
+        <div class="settings-input-wrap">
+          <input type="password" id="settingsApiKey" placeholder="APIキーを入力" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <button class="toggle-visibility" id="toggleApiKey" type="button">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="settings-hint">
+          <div class="settings-hint-title">APIキーの取得方法</div>
+          <ol>
+            <li><a href="https://www.deepl.com/ja/pro-api" target="_blank" rel="noopener">deepl.com/ja/pro-api</a> にアクセス</li>
+            <li>無料アカウントを作成（クレジットカード登録が必要ですが無料枠あり）</li>
+            <li>アカウント設定ページでAPIキーをコピー</li>
+            <li>上のフィールドに貼り付け</li>
+          </ol>
+          <div class="hint-note">APIキー未設定でも音声認識は利用できます。翻訳なしで原文のみ表示されます。</div>
+        </div>
+      </div>
+
+      <button class="settings-save-btn" id="settingsSaveBtn">保存して始める</button>
+    </div>
+  </div>
+
+  <!-- ヘッダー -->
+  <div class="header">
+    <div class="lang-select">
+      <select id="sourceLang">
+        <option value="en">EN</option>
+        <option value="ja">JA</option>
+        <option value="zh">ZH</option>
+        <option value="ko">KO</option>
+        <option value="es">ES</option>
+        <option value="fr">FR</option>
+        <option value="de">DE</option>
+      </select>
+      <span class="lang-arrow">→</span>
+      <select id="targetLang">
+        <option value="JA" selected>JA</option>
+        <option value="EN">EN</option>
+        <option value="ZH">ZH</option>
+        <option value="KO">KO</option>
+        <option value="ES">ES</option>
+        <option value="FR">FR</option>
+        <option value="DE">DE</option>
+      </select>
+    </div>
+    <button class="settings-btn" id="settingsBtn" type="button">⚙</button>
+  </div>
+
+  <!-- 表示エリア -->
+  <div class="display-area" id="displayArea">
+    <div class="empty-state" id="emptyState">
+      マイクボタンを押して<br>会話を始めてください
+    </div>
+  </div>
+
+  <!-- フッター（固定） -->
+  <div class="footer">
+    <button class="mic-btn" id="micBtn">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+      </svg>
+    </button>
+    <span class="status-text" id="statusText">待機中</span>
+  </div>
+
+  <script>
+    // --- SVGアイコン ---
+    const micSvg = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
+    const stopSvg = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+
+    // --- 状態管理 ---
+    let ws = null;
+    let audioContext = null;
+    let mediaStream = null;
+    let processor = null;
+    let isRecording = false;
+
+    // --- DOM要素 ---
+    const micBtn = document.getElementById('micBtn');
+    const statusText = document.getElementById('statusText');
+    const displayArea = document.getElementById('displayArea');
+    const emptyState = document.getElementById('emptyState');
+    const sourceLangSelect = document.getElementById('sourceLang');
+    const targetLangSelect = document.getElementById('targetLang');
+
+    // --- 設定画面DOM ---
+    const settingsOverlay = document.getElementById('settingsOverlay');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsSaveBtn = document.getElementById('settingsSaveBtn');
+    const settingsApiKey = document.getElementById('settingsApiKey');
+    const toggleApiKey = document.getElementById('toggleApiKey');
+    const settingsSourceLang = document.getElementById('settingsSourceLang');
+    const settingsTargetLang = document.getElementById('settingsTargetLang');
+
+    // --- 設定の読み込み ---
+    function loadSettings() {
+      const source = localStorage.getItem('sourceLang') || 'en';
+      const target = localStorage.getItem('targetLang') || 'JA';
+      const apiKey = localStorage.getItem('deeplApiKey') || '';
+
+      sourceLangSelect.value = source;
+      targetLangSelect.value = target;
+      settingsSourceLang.value = source;
+      settingsTargetLang.value = target;
+      settingsApiKey.value = apiKey;
+    }
+
+    function saveSettings() {
+      const source = settingsSourceLang.value;
+      const target = settingsTargetLang.value;
+      const apiKey = settingsApiKey.value.trim();
+
+      localStorage.setItem('sourceLang', source);
+      localStorage.setItem('targetLang', target);
+      localStorage.setItem('deeplApiKey', apiKey);
+      localStorage.setItem('onboarded', '1');
+
+      sourceLangSelect.value = source;
+      targetLangSelect.value = target;
+    }
+
+    // --- 設定画面の表示/非表示 ---
+    function showSettings() {
+      loadSettings();
+      settingsOverlay.classList.add('visible');
+    }
+
+    function hideSettings() {
+      settingsOverlay.classList.remove('visible');
+    }
+
+    settingsBtn.addEventListener('click', showSettings);
+
+    settingsSaveBtn.addEventListener('click', () => {
+      saveSettings();
+      hideSettings();
+    });
+
+    // オーバーレイ背景をタップで閉じる
+    settingsOverlay.addEventListener('click', (e) => {
+      if (e.target === settingsOverlay) hideSettings();
+    });
+
+    // APIキー表示/非表示トグル
+    toggleApiKey.addEventListener('click', () => {
+      const input = settingsApiKey;
+      if (input.type === 'password') {
+        input.type = 'text';
+        toggleApiKey.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+      } else {
+        input.type = 'password';
+        toggleApiKey.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+      }
+    });
+
+    // 初回アクセス時にオンボーディング表示
+    if (!localStorage.getItem('onboarded')) {
+      showSettings();
+    }
+
+    // --- localStorageから設定読み込み ---
+    loadSettings();
+
+    // ヘッダーの言語セレクタ変更時もlocalStorageに保存
+    sourceLangSelect.addEventListener('change', () => {
+      localStorage.setItem('sourceLang', sourceLangSelect.value);
+    });
+    targetLangSelect.addEventListener('change', () => {
+      localStorage.setItem('targetLang', targetLangSelect.value);
+    });
+
+    // --- マイクボタン ---
+    micBtn.addEventListener('click', () => {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    });
+
+    // --- 録音開始 ---
+    async function startRecording() {
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            sampleRate: 16000,
+            echoCancellation: true,
+            noiseSuppression: true,
+          },
+        });
+
+        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${protocol}//${location.host}`);
+
+        ws.onopen = () => {
+          ws.send(JSON.stringify({
+            type: 'config',
+            sourceLang: sourceLangSelect.value,
+            targetLang: targetLangSelect.value,
+            deeplApiKey: localStorage.getItem('deeplApiKey') || '',
+          }));
+        };
+
+        ws.onmessage = (event) => {
+          const msg = JSON.parse(event.data);
+          handleServerMessage(msg);
+        };
+
+        ws.onerror = (err) => {
+          console.error('WebSocket error:', err);
+          statusText.textContent = '接続エラー';
+          stopRecording();
+        };
+
+        ws.onclose = () => {
+          if (isRecording) {
+            statusText.textContent = '接続が切れました';
+            stopRecording();
+          }
+        };
+
+        audioContext = new (window.AudioContext || window.webkitAudioContext)({
+          sampleRate: 16000,
+        });
+
+        const source = audioContext.createMediaStreamSource(mediaStream);
+        processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+        processor.onaudioprocess = (e) => {
+          if (!isRecording || !ws || ws.readyState !== WebSocket.OPEN) return;
+          const float32 = e.inputBuffer.getChannelData(0);
+          const int16 = new Int16Array(float32.length);
+          for (let i = 0; i < float32.length; i++) {
+            const s = Math.max(-1, Math.min(1, float32[i]));
+            int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+          }
+          ws.send(int16.buffer);
+        };
+
+        source.connect(processor);
+        processor.connect(audioContext.destination);
+
+        isRecording = true;
+        micBtn.classList.add('recording');
+        micBtn.innerHTML = stopSvg;
+        statusText.textContent = '接続中...';
+
+        if (emptyState) emptyState.remove();
+      } catch (err) {
+        console.error('Failed to start recording:', err);
+        if (err.name === 'NotAllowedError') {
+          statusText.textContent = 'マイクの許可が必要です';
+        } else {
+          statusText.textContent = 'エラーが発生しました';
+        }
+      }
+    }
+
+    // --- 録音停止 ---
+    function stopRecording() {
+      isRecording = false;
+
+      if (ws) {
+        ws.send(JSON.stringify({ type: 'stop' }));
+        ws.close();
+        ws = null;
+      }
+
+      if (processor) {
+        processor.disconnect();
+        processor = null;
+      }
+
+      if (audioContext) {
+        audioContext.close();
+        audioContext = null;
+      }
+
+      if (mediaStream) {
+        mediaStream.getTracks().forEach((t) => t.stop());
+        mediaStream = null;
+      }
+
+      micBtn.classList.remove('recording');
+      micBtn.innerHTML = micSvg;
+      statusText.textContent = '待機中';
+    }
+
+    // --- サーバーメッセージ処理 ---
+    let interimEl = null;
+    let currentTranslationEl = null;
+
+    function handleServerMessage(msg) {
+      switch (msg.type) {
+        case 'status':
+          if (msg.message === 'ready') {
+            statusText.textContent = '録音中...';
+          }
+          break;
+
+        case 'interim':
+          showInterim(msg.transcript);
+          break;
+
+        case 'final_transcript':
+          clearInterim();
+          break;
+
+        case 'translation':
+          showTranslation(msg.original, msg.translated);
+          break;
+
+        case 'error':
+          statusText.textContent = msg.message;
+          break;
+      }
+    }
+
+    // --- 中間結果表示 ---
+    function showInterim(text) {
+      if (!interimEl) {
+        interimEl = document.createElement('div');
+        interimEl.className = 'interim-text';
+        displayArea.appendChild(interimEl);
+      }
+      interimEl.textContent = text;
+      scrollToBottom();
+    }
+
+    function clearInterim() {
+      if (interimEl) {
+        interimEl.textContent = '';
+      }
+    }
+
+    // --- 確定翻訳表示 ---
+    function showTranslation(original, translated) {
+      if (currentTranslationEl) {
+        const historyItem = document.createElement('div');
+        historyItem.className = 'history-item';
+        historyItem.innerHTML = `
+          <div class="original">${escapeHtml(currentTranslationEl.dataset.original)}</div>
+          <div class="translated">${escapeHtml(currentTranslationEl.dataset.translated)}</div>
+        `;
+        displayArea.insertBefore(historyItem, currentTranslationEl);
+        currentTranslationEl.remove();
+      }
+
+      currentTranslationEl = document.createElement('div');
+      currentTranslationEl.className = 'current-translation pop';
+      currentTranslationEl.dataset.original = original;
+      currentTranslationEl.dataset.translated = translated;
+      currentTranslationEl.innerHTML = `
+        <div class="original">${escapeHtml(original)}</div>
+        <div class="translated">${escapeHtml(translated)}</div>
+      `;
+
+      if (interimEl) {
+        displayArea.insertBefore(currentTranslationEl, interimEl);
+      } else {
+        displayArea.appendChild(currentTranslationEl);
+      }
+
+      setTimeout(() => currentTranslationEl.classList.remove('pop'), 300);
+      scrollToBottom();
+    }
+
+    function scrollToBottom() {
+      displayArea.scrollTop = displayArea.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
