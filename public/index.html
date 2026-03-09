@@ -16,6 +16,12 @@
       box-sizing: border-box;
     }
 
+    html, body {
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100vw;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
       background: #000;
@@ -24,10 +30,24 @@
       height: 100dvh;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
-      overflow-x: hidden;
+      overflow-y: hidden;
       -webkit-text-size-adjust: 100%;
-      max-width: 100vw;
+    }
+
+    /* 全テキストブロック共通: はみ出し防止 */
+    .current-translation,
+    .history-item,
+    .interim-text {
+      max-width: calc(100vw - 32px) !important;
+      width: calc(100vw - 32px) !important;
+      box-sizing: border-box !important;
+      overflow-wrap: break-word !important;
+      word-break: break-word !important;
+    }
+
+    .current-translation .translated,
+    .history-item .translated {
+      font-size: clamp(16px, 4vw, 24px) !important;
     }
 
     /* ヘッダー */
