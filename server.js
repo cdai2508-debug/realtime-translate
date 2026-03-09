@@ -14,6 +14,11 @@ const PORT = process.env.PORT || 3000;
 // 静的ファイル配信
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ヘルスチェック
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 // DeepL翻訳（APIキーを引数で受け取る）
 async function translate(text, sourceLang, targetLang, deeplApiKey) {
   if (!text || !text.trim()) return '';
@@ -190,6 +195,6 @@ wss.on('connection', (clientWs) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
