@@ -8,7 +8,8 @@
 - **リアルタイム翻訳** — DeepL API による自然な翻訳
 - **7言語対応** — EN / JA / ZH / KO / ES / FR / DE
 - **モバイル最適化** — iPhone Safari でネイティブアプリのように動作（PWA対応）
-- **APIキー不要でも使える** — DeepL APIキー未設定時は原文のみ表示
+- **セルフホスト** — サーバーに秘密情報なし。APIキーはユーザーがブラウザで入力
+- **パスワード保護** — 環境変数 `ACCESS_PASSWORD` で任意にアクセス制限
 
 ## How It Works
 
@@ -26,22 +27,21 @@
 
 ### 1. APIキーの取得
 
-#### Deepgram（音声認識 — 必須）
+アプリ内の設定画面（初回アクセス時に自動表示）で2つのAPIキーを入力します。
 
-1. [deepgram.com](https://deepgram.com) でアカウント作成
-2. Dashboard → API Keys → Create Key
+#### Deepgram（音声認識）
+
+1. [console.deepgram.com](https://console.deepgram.com/signup) でアカウント作成
+2. Dashboard → API Keys → Create a New API Key
 3. キーをコピー
 
-#### DeepL（翻訳 — 任意）
-
-DeepLのAPIキーはアプリ内の設定画面から入力します。サーバー側の設定は不要です。
+#### DeepL（翻訳）
 
 1. [deepl.com/ja/pro-api](https://www.deepl.com/ja/pro-api) にアクセス
 2. 無料アカウントを作成（Free プランで月50万文字まで無料）
 3. アカウント設定ページでAPIキーをコピー
-4. アプリの設定画面（⚙）に貼り付け
 
-> APIキー未設定でも音声認識は利用できます。翻訳なしで原文がそのまま表示されます。
+> APIキーはブラウザの localStorage に保存されます。サーバーには保存されません。
 
 ### 2. ローカルで動かす
 
@@ -49,24 +49,7 @@ DeepLのAPIキーはアプリ内の設定画面から入力します。サーバ
 git clone https://github.com/cdai2508-debug/realtime-translate.git
 cd realtime-translate
 npm install
-```
-
-`.env` ファイルを作成:
-
-```bash
 cp .env.example .env
-```
-
-`.env` を編集して Deepgram API キーを設定:
-
-```
-DEEPGRAM_API_KEY=your_deepgram_api_key_here
-PORT=3000
-```
-
-起動:
-
-```bash
 npm start
 ```
 
@@ -93,9 +76,17 @@ Railway なら数クリックでデプロイできます。
 1. [Railway](https://railway.app) にログイン
 2. 「New Project」→「Deploy from GitHub repo」
 3. このリポジトリを選択
-4. 環境変数を設定:
-   - `DEEPGRAM_API_KEY` = あなたのDeepgramキー
+4. （任意）環境変数 `ACCESS_PASSWORD` を設定してアクセス制限
 5. デプロイ完了。Railway が自動でURLを発行します
+
+### 環境変数
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ACCESS_PASSWORD` | No | 設定するとパスワード認証が有効になる |
+| `PORT` | No | サーバーのポート番号（デフォルト: 3000） |
+
+> `DEEPGRAM_API_KEY` と `DEEPL_API_KEY` はサーバー側では不要です。ユーザーがアプリの設定画面から入力します。
 
 ## Tech Stack
 

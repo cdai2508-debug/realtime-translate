@@ -266,7 +266,7 @@
       background: #1c1c1e;
       width: 100%;
       max-width: 480px;
-      max-height: 90dvh;
+      max-height: 92dvh;
       border-radius: 20px 20px 0 0;
       padding: 24px 20px;
       padding-bottom: calc(24px + env(safe-area-inset-bottom));
@@ -337,7 +337,7 @@
     }
 
     .settings-hint {
-      margin-top: 20px;
+      margin-top: 12px;
       background: #2c2c2e;
       border-radius: 12px;
       padding: 16px;
@@ -390,15 +390,6 @@
       text-decoration: none;
     }
 
-    .settings-hint .hint-note {
-      font-size: 13px;
-      color: #636366;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid #3a3a3c;
-      line-height: 1.5;
-    }
-
     .settings-lang-row {
       display: flex;
       align-items: center;
@@ -441,6 +432,11 @@
 
     .settings-save-btn:active {
       opacity: 0.7;
+    }
+
+    .settings-save-btn:disabled {
+      opacity: 0.3;
+      cursor: default;
     }
 
     /* === 認証画面 === */
@@ -584,6 +580,49 @@
       <div class="settings-title">設定</div>
 
       <div class="settings-section">
+        <div class="settings-label">Deepgram APIキー（音声認識）</div>
+        <div class="settings-input-wrap">
+          <input type="password" id="settingsDeepgramKey" placeholder="APIキーを入力" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <button class="toggle-visibility" data-target="settingsDeepgramKey" type="button">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+        <div class="settings-hint">
+          <div class="settings-hint-title">Deepgram APIキーの取得方法</div>
+          <ol>
+            <li><a href="https://console.deepgram.com/signup" target="_blank" rel="noopener">console.deepgram.com</a> でアカウント作成</li>
+            <li>Dashboard → API Keys → Create a New API Key</li>
+            <li>作成されたキーをコピーして上に貼り付け</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-label">DeepL APIキー（翻訳）</div>
+        <div class="settings-input-wrap">
+          <input type="password" id="settingsDeeplKey" placeholder="APIキーを入力" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <button class="toggle-visibility" data-target="settingsDeeplKey" type="button">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+        <div class="settings-hint">
+          <div class="settings-hint-title">DeepL APIキーの取得方法</div>
+          <ol>
+            <li><a href="https://www.deepl.com/ja/pro-api" target="_blank" rel="noopener">deepl.com/ja/pro-api</a> にアクセス</li>
+            <li>無料アカウントを作成（Free プランで月50万文字まで無料）</li>
+            <li>アカウント設定ページでAPIキーをコピー</li>
+            <li>上のフィールドに貼り付け</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="settings-section">
         <div class="settings-label">翻訳言語</div>
         <div class="settings-lang-row">
           <select id="settingsSourceLang">
@@ -608,31 +647,7 @@
         </div>
       </div>
 
-      <div class="settings-section">
-        <div class="settings-label">DeepL APIキー（任意）</div>
-        <div class="settings-input-wrap">
-          <input type="password" id="settingsApiKey" placeholder="APIキーを入力" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-          <button class="toggle-visibility" id="toggleApiKey" type="button">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-          </button>
-        </div>
-
-        <div class="settings-hint">
-          <div class="settings-hint-title">APIキーの取得方法</div>
-          <ol>
-            <li><a href="https://www.deepl.com/ja/pro-api" target="_blank" rel="noopener">deepl.com/ja/pro-api</a> にアクセス</li>
-            <li>無料アカウントを作成（クレジットカード登録が必要ですが無料枠あり）</li>
-            <li>アカウント設定ページでAPIキーをコピー</li>
-            <li>上のフィールドに貼り付け</li>
-          </ol>
-          <div class="hint-note">APIキー未設定でも音声認識は利用できます。翻訳なしで原文のみ表示されます。</div>
-        </div>
-      </div>
-
-      <button class="settings-save-btn" id="settingsSaveBtn">保存して始める</button>
+      <button class="settings-save-btn" id="settingsSaveBtn" disabled>保存して始める</button>
     </div>
   </div>
 
@@ -706,7 +721,6 @@
     }
 
     async function initAuth() {
-      // 保存済みパスワードで自動認証
       const saved = getAccessPassword();
       if (saved) {
         const ok = await checkAuth(saved);
@@ -717,14 +731,12 @@
         localStorage.removeItem('accessPassword');
       }
 
-      // パスワード不要かチェック
       const noPassword = await checkAuth('');
       if (noPassword) {
         authScreen.classList.add('hidden');
         return;
       }
 
-      // 認証画面を表示
       authScreen.classList.remove('hidden');
     }
 
@@ -759,6 +771,8 @@
     // --- SVGアイコン ---
     const micSvg = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
     const stopSvg = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+    const eyeOpenSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    const eyeClosedSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 
     // --- 状態管理 ---
     let ws = null;
@@ -777,35 +791,63 @@
 
     // --- 設定画面DOM ---
     const settingsOverlay = document.getElementById('settingsOverlay');
-    const settingsPanel = document.getElementById('settingsPanel');
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsSaveBtn = document.getElementById('settingsSaveBtn');
-    const settingsApiKey = document.getElementById('settingsApiKey');
-    const toggleApiKey = document.getElementById('toggleApiKey');
+    const settingsDeepgramKey = document.getElementById('settingsDeepgramKey');
+    const settingsDeeplKey = document.getElementById('settingsDeeplKey');
     const settingsSourceLang = document.getElementById('settingsSourceLang');
     const settingsTargetLang = document.getElementById('settingsTargetLang');
+
+    // --- APIキー表示/非表示トグル（汎用） ---
+    document.querySelectorAll('.toggle-visibility').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.dataset.target);
+        if (input.type === 'password') {
+          input.type = 'text';
+          btn.innerHTML = eyeClosedSvg;
+        } else {
+          input.type = 'password';
+          btn.innerHTML = eyeOpenSvg;
+        }
+      });
+    });
+
+    // --- 保存ボタンのバリデーション ---
+    function updateSaveButton() {
+      const hasDeepgram = settingsDeepgramKey.value.trim().length > 0;
+      const hasDeepL = settingsDeeplKey.value.trim().length > 0;
+      settingsSaveBtn.disabled = !(hasDeepgram && hasDeepL);
+    }
+
+    settingsDeepgramKey.addEventListener('input', updateSaveButton);
+    settingsDeeplKey.addEventListener('input', updateSaveButton);
 
     // --- 設定の読み込み ---
     function loadSettings() {
       const source = localStorage.getItem('sourceLang') || 'en';
       const target = localStorage.getItem('targetLang') || 'JA';
-      const apiKey = localStorage.getItem('deeplApiKey') || '';
+      const deepgramKey = localStorage.getItem('deepgramApiKey') || '';
+      const deeplKey = localStorage.getItem('deeplApiKey') || '';
 
       sourceLangSelect.value = source;
       targetLangSelect.value = target;
       settingsSourceLang.value = source;
       settingsTargetLang.value = target;
-      settingsApiKey.value = apiKey;
+      settingsDeepgramKey.value = deepgramKey;
+      settingsDeeplKey.value = deeplKey;
+      updateSaveButton();
     }
 
     function saveSettings() {
       const source = settingsSourceLang.value;
       const target = settingsTargetLang.value;
-      const apiKey = settingsApiKey.value.trim();
+      const deepgramKey = settingsDeepgramKey.value.trim();
+      const deeplKey = settingsDeeplKey.value.trim();
 
       localStorage.setItem('sourceLang', source);
       localStorage.setItem('targetLang', target);
-      localStorage.setItem('deeplApiKey', apiKey);
+      localStorage.setItem('deepgramApiKey', deepgramKey);
+      localStorage.setItem('deeplApiKey', deeplKey);
       localStorage.setItem('onboarded', '1');
 
       sourceLangSelect.value = source;
@@ -829,21 +871,8 @@
       hideSettings();
     });
 
-    // オーバーレイ背景をタップで閉じる
     settingsOverlay.addEventListener('click', (e) => {
       if (e.target === settingsOverlay) hideSettings();
-    });
-
-    // APIキー表示/非表示トグル
-    toggleApiKey.addEventListener('click', () => {
-      const input = settingsApiKey;
-      if (input.type === 'password') {
-        input.type = 'text';
-        toggleApiKey.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-      } else {
-        input.type = 'password';
-        toggleApiKey.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-      }
     });
 
     // 初回アクセス時にオンボーディング表示
@@ -851,10 +880,8 @@
       showSettings();
     }
 
-    // --- localStorageから設定読み込み ---
     loadSettings();
 
-    // ヘッダーの言語セレクタ変更時もlocalStorageに保存
     sourceLangSelect.addEventListener('change', () => {
       localStorage.setItem('sourceLang', sourceLangSelect.value);
     });
@@ -873,6 +900,14 @@
 
     // --- 録音開始 ---
     async function startRecording() {
+      const deepgramKey = localStorage.getItem('deepgramApiKey') || '';
+      const deeplKey = localStorage.getItem('deeplApiKey') || '';
+
+      if (!deepgramKey || !deeplKey) {
+        showSettings();
+        return;
+      }
+
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({
           audio: {
@@ -891,7 +926,8 @@
             type: 'config',
             sourceLang: sourceLangSelect.value,
             targetLang: targetLangSelect.value,
-            deeplApiKey: localStorage.getItem('deeplApiKey') || '',
+            deepgramApiKey: deepgramKey,
+            deeplApiKey: deeplKey,
             password: getAccessPassword(),
           }));
         };
@@ -1011,7 +1047,6 @@
       }
     }
 
-    // --- 中間結果表示 ---
     function showInterim(text) {
       if (!interimEl) {
         interimEl = document.createElement('div');
@@ -1028,7 +1063,6 @@
       }
     }
 
-    // --- 確定翻訳表示 ---
     function showTranslation(original, translated) {
       if (currentTranslationEl) {
         const historyItem = document.createElement('div');

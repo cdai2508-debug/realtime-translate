@@ -11,7 +11,6 @@ const http = require('http');
 const WebSocket = require('ws');
 
 const PORT = parseInt(process.env.PORT, 10) || 3000;
-const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
 const ACCESS_PASSWORD = process.env.ACCESS_PASSWORD || '';
 
 console.log(`Server starting on port ${PORT}`);
@@ -46,9 +45,8 @@ app.post('/api/auth', (req, res) => {
 // DeepL翻訳（APIキーを引数で受け取る）
 async function translate(text, sourceLang, targetLang, deeplApiKey) {
   if (!text || !text.trim()) return '';
-  if (!deeplApiKey) return text; // キー無しの場合は原文をそのまま返す
+  if (!deeplApiKey) return text;
 
-  // Free APIかPro APIかを判定
   const isFree = deeplApiKey.endsWith(':fx');
   const apiUrl = isFree
     ? 'https://api-free.deepl.com/v2/translate'
@@ -84,10 +82,10 @@ wss.on('connection', (clientWs) => {
   let sourceLang = 'en';
   let targetLang = 'JA';
   let deeplApiKey = '';
-  let authenticated = !ACCESS_PASSWORD; // パスワード未設定なら認証済み扱い
+  let deepgramApiKey = '';
+  let authenticated = !ACCESS_PASSWORD;
 
   clientWs.on('message', (message) => {
-    // テキストメッセージ（設定など）
     if (typeof message === 'string' || (message instanceof Buffer && message[0] === 0x7b)) {
       try {
         const msg = JSON.parse(message.toString());
@@ -103,8 +101,15 @@ wss.on('connection', (clientWs) => {
 
           sourceLang = msg.sourceLang || 'en';
           targetLang = msg.targetLang || 'JA';
-          deeplApiKey = msg.deeplApiKey || process.env.DEEPL_API_KEY || '';
-          console.log(`Config: ${sourceLang} → ${targetLang}, API key: ${deeplApiKey ? 'set' : 'none'}`);
+          deeplApiKey = msg.deeplApiKey || '';
+          deepgramApiKey = msg.deepgramApiKey || '';
+
+          if (!deepgramApiKey) {
+            clientWs.send(JSON.stringify({ type: 'error', message: 'Deepgram APIキーが設定されていません' }));
+            return;
+          }
+
+          console.log(`Config: ${sourceLang} → ${targetLang}`);
           startDeepgram();
           return;
         }
@@ -147,7 +152,7 @@ wss.on('connection', (clientWs) => {
     const dgUrl = `wss://api.deepgram.com/v1/listen?${params}`;
 
     deepgramWs = new WebSocket(dgUrl, {
-      headers: { Authorization: `Token ${DEEPGRAM_API_KEY}` },
+      headers: { Authorization: `Token ${deepgramApiKey}` },
     });
 
     deepgramWs.on('open', () => {
@@ -182,7 +187,6 @@ wss.on('connection', (clientWs) => {
               }
             } catch (err) {
               console.error('Translation error:', err);
-              // 翻訳エラー時も原文を返す
               if (clientWs.readyState === WebSocket.OPEN) {
                 clientWs.send(JSON.stringify({
                   type: 'translation',
@@ -207,7 +211,7 @@ wss.on('connection', (clientWs) => {
       console.error('Deepgram error:', err.message);
       clientWs.send(JSON.stringify({
         type: 'error',
-        message: 'Deepgram接続エラー',
+        message: 'Deepgram接続エラー: APIキーを確認してください',
       }));
     });
 
