@@ -29,6 +29,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// 認証が必要かどうかを返す
+app.get('/api/auth/required', (req, res) => {
+  res.json({ required: !!ACCESS_PASSWORD });
+});
+
 // 認証エンドポイント
 app.post('/api/auth', (req, res) => {
   if (!ACCESS_PASSWORD) {
