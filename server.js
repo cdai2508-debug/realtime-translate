@@ -47,15 +47,43 @@ app.post('/api/auth', (req, res) => {
   }
 });
 
+// DeepL言語コード変換（Deepgramは小文字、DeepLは大文字 + 特殊ケース）
+function toDeepLSourceLang(lang) {
+  const upper = lang.toUpperCase();
+  // DeepLのsource_langではZHはそのまま使える
+  return upper;
+}
+
+function toDeepLTargetLang(lang) {
+  const upper = lang.toUpperCase();
+  // DeepLのtarget_langではEN→EN-US、PT→PT-BRなど特殊ケースあり
+  if (upper === 'EN') return 'EN-US';
+  return upper;
+}
+
 // DeepL翻訳（APIキーを引数で受け取る）
 async function translate(text, sourceLang, targetLang, deeplApiKey) {
   if (!text || !text.trim()) return '';
-  if (!deeplApiKey) return text;
+  if (!deeplApiKey) {
+    console.log('DeepL: no API key, returning original text');
+    return text;
+  }
 
   const isFree = deeplApiKey.endsWith(':fx');
   const apiUrl = isFree
     ? 'https://api-free.deepl.com/v2/translate'
     : 'https://api.deepl.com/v2/translate';
+
+  const dlSourceLang = toDeepLSourceLang(sourceLang);
+  const dlTargetLang = toDeepLTargetLang(targetLang);
+
+  console.log(`DeepL: "${text}" | ${dlSourceLang} → ${dlTargetLang} | ${isFree ? 'Free' : 'Pro'} API | key: ${deeplApiKey.slice(0, 8)}...`);
+
+  const body = {
+    text: [text],
+    source_lang: dlSourceLang,
+    target_lang: dlTargetLang,
+  };
 
   const response = await fetch(apiUrl, {
     method: 'POST',
@@ -63,19 +91,19 @@ async function translate(text, sourceLang, targetLang, deeplApiKey) {
       'Authorization': `DeepL-Auth-Key ${deeplApiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      text: [text],
-      source_lang: sourceLang,
-      target_lang: targetLang,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
-    console.error('DeepL API error:', response.status, await response.text());
+    const errorBody = await response.text();
+    console.error(`DeepL API error: ${response.status} ${response.statusText}`);
+    console.error(`DeepL API response: ${errorBody}`);
+    console.error(`DeepL API request: ${JSON.stringify(body)}`);
     return `[翻訳エラー] ${text}`;
   }
 
   const data = await response.json();
+  console.log(`DeepL: translated → "${data.translations[0].text}"`);
   return data.translations[0].text;
 }
 
@@ -114,7 +142,7 @@ wss.on('connection', (clientWs) => {
             return;
           }
 
-          console.log(`Config: ${sourceLang} → ${targetLang}`);
+          console.log(`Config: ${sourceLang} → ${targetLang} | Deepgram key: ${deepgramApiKey ? deepgramApiKey.slice(0, 8) + '...' : 'NONE'} | DeepL key: ${deeplApiKey ? deeplApiKey.slice(0, 8) + '...' : 'NONE'}`);
           startDeepgram();
           return;
         }
