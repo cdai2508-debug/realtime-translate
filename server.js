@@ -69,7 +69,8 @@ async function translate(text, sourceLang, targetLang, deeplApiKey) {
     return text;
   }
 
-  const isFree = deeplApiKey.endsWith(':fx');
+  const trimmedKey = deeplApiKey.trim();
+  const isFree = trimmedKey.endsWith(':fx');
   const apiUrl = isFree
     ? 'https://api-free.deepl.com/v2/translate'
     : 'https://api.deepl.com/v2/translate';
@@ -77,7 +78,7 @@ async function translate(text, sourceLang, targetLang, deeplApiKey) {
   const dlSourceLang = toDeepLSourceLang(sourceLang);
   const dlTargetLang = toDeepLTargetLang(targetLang);
 
-  console.log(`DeepL: "${text}" | ${dlSourceLang} → ${dlTargetLang} | ${isFree ? 'Free' : 'Pro'} API | key: ${deeplApiKey.slice(0, 8)}...`);
+  console.log(`DeepL: "${text}" | ${dlSourceLang} → ${dlTargetLang} | ${isFree ? 'Free' : 'Pro'} API | url: ${apiUrl} | key: ${trimmedKey.slice(0, 8)}...${trimmedKey.slice(-4)}`);
 
   const body = {
     text: [text],
@@ -88,7 +89,7 @@ async function translate(text, sourceLang, targetLang, deeplApiKey) {
   const response = await fetch(apiUrl, {
     method: 'POST',
     headers: {
-      'Authorization': `DeepL-Auth-Key ${deeplApiKey}`,
+      'Authorization': `DeepL-Auth-Key ${trimmedKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
