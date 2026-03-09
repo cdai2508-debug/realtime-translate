@@ -34,22 +34,6 @@
       -webkit-text-size-adjust: 100%;
     }
 
-    /* 全テキストブロック共通: はみ出し防止 */
-    .current-translation,
-    .history-item,
-    .interim-text {
-      max-width: calc(100vw - 32px) !important;
-      width: calc(100vw - 32px) !important;
-      box-sizing: border-box !important;
-      overflow-wrap: break-word !important;
-      word-break: break-word !important;
-    }
-
-    .current-translation .translated,
-    .history-item .translated {
-      font-size: clamp(16px, 4vw, 24px) !important;
-    }
-
     /* ヘッダー */
     .header {
       display: flex;
@@ -110,27 +94,27 @@
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
-      padding: 20px 16px;
+      padding: 16px;
       padding-left: calc(16px + env(safe-area-inset-left));
       padding-right: calc(16px + env(safe-area-inset-right));
-      padding-bottom: 140px;
+      padding-bottom: 130px;
       overflow-y: auto;
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
-      gap: 14px;
-      min-width: 0;
+      gap: 12px;
     }
 
     /* 履歴 */
     .history-item {
+      max-width: calc(100vw - 32px);
       opacity: 0.3;
       font-size: 14px;
       line-height: 1.6;
       padding: 8px 14px;
       border-left: 2px solid #2c2c2e;
       transition: opacity 0.5s ease;
-      word-break: break-word;
       overflow-wrap: break-word;
+      word-break: break-word;
     }
 
     .history-item .original {
@@ -145,34 +129,32 @@
 
     /* 確定翻訳（最新） */
     .current-translation {
-      font-size: 24px;
+      max-width: calc(100vw - 32px);
+      font-size: clamp(16px, 4vw, 24px);
       font-weight: 600;
       line-height: 1.5;
-      padding: 20px;
+      padding: 16px;
       background: #1c1c1e;
-      border-radius: 16px;
+      border-radius: 12px;
       border-left: 3px solid #0a84ff;
-      min-height: 60px;
-      max-width: 100%;
       margin-bottom: 8px;
-      transition: all 0.3s ease;
-      word-break: break-word;
       overflow-wrap: break-word;
+      word-break: break-word;
     }
 
     .current-translation .original {
-      font-size: 14px;
+      font-size: clamp(12px, 2.5vw, 14px);
       color: #636366;
       font-weight: 400;
       margin-bottom: 8px;
-      word-break: break-word;
       overflow-wrap: break-word;
+      word-break: break-word;
     }
 
     .current-translation .translated {
       color: #f5f5f7;
-      word-break: break-word;
       overflow-wrap: break-word;
+      word-break: break-word;
     }
 
     .current-translation.pop {
@@ -187,87 +169,43 @@
 
     /* 中間結果 */
     .interim-text {
-      font-size: 15px;
+      max-width: calc(100vw - 32px);
+      font-size: 14px;
       color: #48484a;
       padding: 10px 14px;
       margin-top: 12px;
       border-left: 2px dashed #2c2c2e;
       border-top: 1px solid #1c1c1e;
-      padding-top: 16px;
-      min-height: 32px;
+      padding-top: 14px;
       font-style: italic;
-      transition: all 0.1s ease;
-      word-break: break-word;
       overflow-wrap: break-word;
-    }
-
-    /* スマホ用レスポンシブ */
-    @media (max-width: 768px) {
-      .current-translation {
-        font-size: 20px;
-        padding: 16px;
-        border-radius: 12px;
-      }
-
-      .current-translation .original {
-        font-size: 13px;
-      }
-
-      .display-area {
-        padding: 16px 12px;
-        padding-left: calc(12px + env(safe-area-inset-left));
-        padding-right: calc(12px + env(safe-area-inset-right));
-        padding-bottom: 130px;
-        gap: 12px;
-      }
-
-      .interim-text {
-        font-size: 14px;
-      }
+      word-break: break-word;
     }
 
     /* ランドスケープ（横向き） */
     @media (orientation: landscape) {
-      .current-translation {
-        font-size: 18px;
-        padding: 14px;
-        border-radius: 10px;
-        min-height: 48px;
-      }
-
-      .current-translation .original {
-        font-size: 12px;
-        margin-bottom: 6px;
-      }
-
       .display-area {
-        padding: 12px 16px;
+        padding: 10px 16px;
         padding-left: calc(16px + env(safe-area-inset-left));
         padding-right: calc(16px + env(safe-area-inset-right));
-        padding-bottom: 110px;
-        gap: 10px;
+        padding-bottom: 100px;
+        gap: 8px;
       }
 
       .footer {
-        padding: 8px 16px;
-        padding-bottom: calc(8px + env(safe-area-inset-bottom));
-        gap: 6px;
+        padding: 6px 16px;
+        padding-bottom: calc(6px + env(safe-area-inset-bottom));
+        gap: 4px;
       }
 
       .mic-btn {
-        width: 56px;
-        height: 56px;
+        width: 52px;
+        height: 52px;
       }
 
       .mic-btn svg {
-        width: 24px;
-        height: 24px;
-      }
-
-      .interim-text {
-        font-size: 13px;
-        margin-top: 8px;
-        padding-top: 10px;
+        width: 22px;
+        height: 22px;
       }
     }
 
