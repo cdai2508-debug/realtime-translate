@@ -12,10 +12,13 @@ const WebSocket = require('ws');
 
 const PORT = parseInt(process.env.PORT, 10) || 3000;
 const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
+const ACCESS_PASSWORD = process.env.ACCESS_PASSWORD || '';
 
 console.log(`Server starting on port ${PORT}`);
+console.log(`Access password: ${ACCESS_PASSWORD ? 'set' : 'not set (open access)'}`);
 
 const app = express();
+app.use(express.json());
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
@@ -25,6 +28,19 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ヘルスチェック
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+// 認証エンドポイント
+app.post('/api/auth', (req, res) => {
+  if (!ACCESS_PASSWORD) {
+    return res.json({ ok: true });
+  }
+  const { password } = req.body;
+  if (password === ACCESS_PASSWORD) {
+    res.json({ ok: true });
+  } else {
+    res.status(401).json({ ok: false, message: 'パスワードが正しくありません' });
+  }
 });
 
 // DeepL翻訳（APIキーを引数で受け取る）
@@ -68,6 +84,7 @@ wss.on('connection', (clientWs) => {
   let sourceLang = 'en';
   let targetLang = 'JA';
   let deeplApiKey = '';
+  let authenticated = !ACCESS_PASSWORD; // パスワード未設定なら認証済み扱い
 
   clientWs.on('message', (message) => {
     // テキストメッセージ（設定など）
@@ -76,6 +93,14 @@ wss.on('connection', (clientWs) => {
         const msg = JSON.parse(message.toString());
 
         if (msg.type === 'config') {
+          // パスワード検証
+          if (ACCESS_PASSWORD && msg.password !== ACCESS_PASSWORD) {
+            clientWs.send(JSON.stringify({ type: 'error', message: '認証エラー' }));
+            clientWs.close();
+            return;
+          }
+          authenticated = true;
+
           sourceLang = msg.sourceLang || 'en';
           targetLang = msg.targetLang || 'JA';
           deeplApiKey = msg.deeplApiKey || process.env.DEEPL_API_KEY || '';
@@ -95,8 +120,8 @@ wss.on('connection', (clientWs) => {
       }
     }
 
-    // 音声データをDeepgramに転送
-    if (deepgramWs && deepgramWs.readyState === WebSocket.OPEN) {
+    // 音声データをDeepgramに転送（認証済みの場合のみ）
+    if (authenticated && deepgramWs && deepgramWs.readyState === WebSocket.OPEN) {
       deepgramWs.send(message);
     }
   });

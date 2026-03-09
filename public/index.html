@@ -442,9 +442,141 @@
     .settings-save-btn:active {
       opacity: 0.7;
     }
+
+    /* === 認証画面 === */
+    .auth-screen {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .auth-screen.hidden {
+      display: none;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+    }
+
+    .auth-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 24px;
+      background: #1c1c1e;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .auth-icon svg {
+      width: 32px;
+      height: 32px;
+      color: #f5f5f7;
+    }
+
+    .auth-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .auth-subtitle {
+      font-size: 14px;
+      color: #636366;
+      margin-bottom: 28px;
+    }
+
+    .auth-input-wrap {
+      display: flex;
+      align-items: center;
+      background: #1c1c1e;
+      border: 1px solid #2c2c2e;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      transition: border-color 0.2s;
+    }
+
+    .auth-input-wrap.error {
+      border-color: #ff453a;
+    }
+
+    .auth-input-wrap input {
+      flex: 1;
+      background: none;
+      border: none;
+      color: #f5f5f7;
+      font-size: 16px;
+      padding: 14px 16px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .auth-input-wrap input::placeholder {
+      color: #48484a;
+    }
+
+    .auth-error {
+      font-size: 13px;
+      color: #ff453a;
+      margin-bottom: 16px;
+      min-height: 18px;
+    }
+
+    .auth-btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: #0a84ff;
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.2s;
+    }
+
+    .auth-btn:active {
+      opacity: 0.7;
+    }
+
+    .auth-btn:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
   </style>
 </head>
 <body>
+  <!-- 認証画面 -->
+  <div class="auth-screen" id="authScreen">
+    <div class="auth-card">
+      <div class="auth-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/>
+        </svg>
+      </div>
+      <div class="auth-title">リアルタイム翻訳</div>
+      <div class="auth-subtitle">パスワードを入力してください</div>
+      <div class="auth-input-wrap" id="authInputWrap">
+        <input type="password" id="authPassword" placeholder="パスワード" autocomplete="current-password">
+      </div>
+      <div class="auth-error" id="authError"></div>
+      <button class="auth-btn" id="authBtn">ログイン</button>
+    </div>
+  </div>
+
   <!-- 設定画面 -->
   <div class="settings-overlay" id="settingsOverlay">
     <div class="settings-panel" id="settingsPanel">
@@ -549,6 +681,81 @@
   </div>
 
   <script>
+    // --- 認証 ---
+    const authScreen = document.getElementById('authScreen');
+    const authPassword = document.getElementById('authPassword');
+    const authBtn = document.getElementById('authBtn');
+    const authError = document.getElementById('authError');
+    const authInputWrap = document.getElementById('authInputWrap');
+
+    function getAccessPassword() {
+      return localStorage.getItem('accessPassword') || '';
+    }
+
+    async function checkAuth(password) {
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+        return res.ok;
+      } catch {
+        return false;
+      }
+    }
+
+    async function initAuth() {
+      // 保存済みパスワードで自動認証
+      const saved = getAccessPassword();
+      if (saved) {
+        const ok = await checkAuth(saved);
+        if (ok) {
+          authScreen.classList.add('hidden');
+          return;
+        }
+        localStorage.removeItem('accessPassword');
+      }
+
+      // パスワード不要かチェック
+      const noPassword = await checkAuth('');
+      if (noPassword) {
+        authScreen.classList.add('hidden');
+        return;
+      }
+
+      // 認証画面を表示
+      authScreen.classList.remove('hidden');
+    }
+
+    authBtn.addEventListener('click', async () => {
+      const pw = authPassword.value;
+      if (!pw) return;
+
+      authBtn.disabled = true;
+      authBtn.textContent = '確認中...';
+      authError.textContent = '';
+      authInputWrap.classList.remove('error');
+
+      const ok = await checkAuth(pw);
+      if (ok) {
+        localStorage.setItem('accessPassword', pw);
+        authScreen.classList.add('hidden');
+      } else {
+        authError.textContent = 'パスワードが正しくありません';
+        authInputWrap.classList.add('error');
+      }
+
+      authBtn.disabled = false;
+      authBtn.textContent = 'ログイン';
+    });
+
+    authPassword.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') authBtn.click();
+    });
+
+    initAuth();
+
     // --- SVGアイコン ---
     const micSvg = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
     const stopSvg = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
@@ -685,6 +892,7 @@
             sourceLang: sourceLangSelect.value,
             targetLang: targetLangSelect.value,
             deeplApiKey: localStorage.getItem('deeplApiKey') || '',
+            password: getAccessPassword(),
           }));
         };
 
