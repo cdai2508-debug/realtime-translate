@@ -439,6 +439,27 @@
       cursor: default;
     }
 
+    .settings-save-btn:disabled:active {
+      opacity: 0.3;
+    }
+
+    .settings-validation {
+      font-size: 13px;
+      color: #ff453a;
+      text-align: center;
+      margin-bottom: 16px;
+      min-height: 18px;
+    }
+
+    .mic-btn:disabled {
+      opacity: 0.25;
+      cursor: default;
+    }
+
+    .mic-btn:disabled:active {
+      transform: none;
+    }
+
     /* === 認証画面 === */
     .auth-screen {
       position: fixed;
@@ -580,7 +601,7 @@
       <div class="settings-title">設定</div>
 
       <div class="settings-section">
-        <div class="settings-label">Deepgram APIキー（音声認識）</div>
+        <div class="settings-label">Deepgram APIキー（必須）</div>
         <div class="settings-input-wrap">
           <input type="password" id="settingsDeepgramKey" placeholder="APIキーを入力" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
           <button class="toggle-visibility" data-target="settingsDeepgramKey" type="button">
@@ -601,7 +622,7 @@
       </div>
 
       <div class="settings-section">
-        <div class="settings-label">DeepL APIキー（翻訳）</div>
+        <div class="settings-label">DeepL APIキー（必須）</div>
         <div class="settings-input-wrap">
           <input type="password" id="settingsDeeplKey" placeholder="APIキーを入力" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
           <button class="toggle-visibility" data-target="settingsDeeplKey" type="button">
@@ -647,6 +668,7 @@
         </div>
       </div>
 
+      <div class="settings-validation" id="settingsValidation">両方のAPIキーを入力してください</div>
       <button class="settings-save-btn" id="settingsSaveBtn" disabled>保存して始める</button>
     </div>
   </div>
@@ -812,11 +834,25 @@
       });
     });
 
-    // --- 保存ボタンのバリデーション ---
+    // --- バリデーション ---
+    const settingsValidation = document.getElementById('settingsValidation');
+
+    function hasApiKeys() {
+      const dg = (localStorage.getItem('deepgramApiKey') || '').trim();
+      const dl = (localStorage.getItem('deeplApiKey') || '').trim();
+      return dg.length > 0 && dl.length > 0;
+    }
+
     function updateSaveButton() {
       const hasDeepgram = settingsDeepgramKey.value.trim().length > 0;
       const hasDeepL = settingsDeeplKey.value.trim().length > 0;
-      settingsSaveBtn.disabled = !(hasDeepgram && hasDeepL);
+      const valid = hasDeepgram && hasDeepL;
+      settingsSaveBtn.disabled = !valid;
+      settingsValidation.textContent = valid ? '' : '両方のAPIキーを入力してください';
+    }
+
+    function updateMicButton() {
+      micBtn.disabled = !hasApiKeys();
     }
 
     settingsDeepgramKey.addEventListener('input', updateSaveButton);
@@ -869,10 +905,12 @@
     settingsSaveBtn.addEventListener('click', () => {
       saveSettings();
       hideSettings();
+      updateMicButton();
     });
 
     settingsOverlay.addEventListener('click', (e) => {
-      if (e.target === settingsOverlay) hideSettings();
+      // キーが保存済みの場合のみ背景タップで閉じられる
+      if (e.target === settingsOverlay && hasApiKeys()) hideSettings();
     });
 
     // 初回アクセス時にオンボーディング表示
@@ -881,6 +919,7 @@
     }
 
     loadSettings();
+    updateMicButton();
 
     sourceLangSelect.addEventListener('change', () => {
       localStorage.setItem('sourceLang', sourceLangSelect.value);
@@ -891,6 +930,7 @@
 
     // --- マイクボタン ---
     micBtn.addEventListener('click', () => {
+      if (micBtn.disabled) return;
       if (isRecording) {
         stopRecording();
       } else {
@@ -900,13 +940,13 @@
 
     // --- 録音開始 ---
     async function startRecording() {
-      const deepgramKey = localStorage.getItem('deepgramApiKey') || '';
-      const deeplKey = localStorage.getItem('deeplApiKey') || '';
-
-      if (!deepgramKey || !deeplKey) {
+      if (!hasApiKeys()) {
         showSettings();
         return;
       }
+
+      const deepgramKey = localStorage.getItem('deepgramApiKey');
+      const deeplKey = localStorage.getItem('deeplApiKey');
 
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({
